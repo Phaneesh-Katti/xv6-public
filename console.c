@@ -213,6 +213,13 @@ consoleintr(int (*getc)(void))
         consputc(BACKSPACE);
       }
       break;
+    case C('I'):
+      release(&cons.lock);
+      cprintf("Ctrl-I is detected by xv6\n");
+      cprintf("PID    NUM_PAGES\n");
+      memory_printer(); // before acquiring lock, coz it has a cprint
+      acquire(&cons.lock);
+      break;
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;

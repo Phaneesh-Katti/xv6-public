@@ -532,3 +532,21 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+void memory_printer(void)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p=ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->pid>=1 && (p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING))
+    {
+      int num_user_pages = p->sz / PGSIZE;
+      // TODO: partial pages?
+      if (p->sz % PGSIZE != 0) // to add partially allocated page (since they are conitguous, partial = 1 or 0) 
+        num_user_pages++;
+      cprintf("%d      %d\n", p->pid, num_user_pages);
+    }
+  }
+  release(&ptable.lock);
+}

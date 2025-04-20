@@ -533,19 +533,45 @@ procdump(void)
   }
 }
 
-void memory_printer(void)
-{
+// void memory_printer(void)
+// {
+//   struct proc *p;
+//   acquire(&ptable.lock);
+//   for(p=ptable.proc; p < &ptable.proc[NPROC]; p++)
+//   {
+//     if (p->pid>=1 && (p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING))
+//     {
+//       int num_user_pages = p->sz / PGSIZE;
+//       // TODO: partial pages?
+//       if (p->sz % PGSIZE != 0) // to add partially allocated page (since they are conitguous, partial = 1 or 0) 
+//         num_user_pages++;
+//       cprintf("%d      %d\n", p->pid, num_user_pages);
+//     }
+//   }
+//   release(&ptable.lock);
+// }
+
+int count_user_pages(struct proc *p) {
+  int count = 0;
+  pde_t *pgdir = p->pgdir;
+
+  for (uint va = 0; va < KERNBASE; va += PGSIZE) {
+    pte_t *pte = walkpgdir(pgdir, (void *)va, 0);
+    if (pte && (*pte & PTE_P)) {
+      count++;
+    }
+  }
+  return count;
+}
+
+void memory_printer(void) {
   struct proc *p;
   acquire(&ptable.lock);
-  for(p=ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->pid>=1 && (p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING))
-    {
-      int num_user_pages = p->sz / PGSIZE;
-      // TODO: partial pages?
-      if (p->sz % PGSIZE != 0) // to add partially allocated page (since they are conitguous, partial = 1 or 0) 
-        num_user_pages++;
-      cprintf("%d      %d\n", p->pid, num_user_pages);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->pid >= 1 &&
+        (p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING)) {
+      int pages_in_ram = count_user_pages(p);
+      cprintf("%d    %d\n", p->pid, pages_in_ram);
     }
   }
   release(&ptable.lock);

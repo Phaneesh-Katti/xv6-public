@@ -93,6 +93,9 @@ void            end_op();
 extern int      ismp;
 void            mpinit(void);
 
+// pageswap.c
+void            swapinit(void);
+
 // picirq.c
 void            picenable(int);
 void            picinit(void);

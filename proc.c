@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "pageswap.h"
 
 struct {
   struct spinlock lock;
@@ -258,6 +259,14 @@ exit(void)
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
+    }
+  }
+
+  for (char *va = 0; va < (char*)curproc->sz; va += PGSIZE) {
+    pte_t *pte = walkpgdir(curproc->pgdir, va, 0);
+    if (pte && !(*pte & PTE_P) && (*pte & SWAPPED_FLAG)) {
+      int slot = (*pte >> 12) & 0xFFFFF;
+      free_swap_slot(slot);
     }
   }
 
@@ -575,4 +584,99 @@ void memory_printer(void) {
     }
   }
   release(&ptable.lock);
+}
+
+#include "pageswap.h"
+
+// Find process with max rss (ties -> lower pid)
+struct proc* select_victim_process(void) {
+  cprintf("Inside select_victim_process\n");
+  struct proc *victim = 0;
+
+  for (int i = 0; i < NPROC; i++) {
+    // struct proc *p = &ptable[i];
+    struct proc *p = &ptable.proc[i];
+    if (p->state == RUNNING || p->state == SLEEPING) {
+      if (!victim || p->rss > victim->rss || (p->rss == victim->rss && p->pid < victim->pid)) {
+        victim = p;
+        cprintf("Found victim %d", victim->pid);
+      }
+    }
+  }
+
+  return victim;
+}
+
+
+// Swap out one page from victim process
+// int swapout_one_page(void) {
+//   cprintf("Inside swapout_one_page\n");
+
+//   struct proc *p = select_victim_process(); // Select victim process
+//   if (!p) return -1;  // No process found, return error
+
+//   // Pass 1: Clear the accessed bit (PTE_A) for all pages
+//   for (char *va = 0; va < (char*)p->sz; va += PGSIZE) {
+//     pte_t *pte = walkpgdir(p->pgdir, va, 0);
+//     if (!pte) continue;
+//     // If PTE is present, clear the accessed bit
+//     if (*pte & PTE_P) {
+//       *pte &= ~PTE_A; // Clear accessed bit
+//     }
+//   }
+
+//   // Pass 2: Look for a page to swap out (i.e., with PTE_A cleared)
+//   for (char *va = 0; va < (char*)p->sz; va += PGSIZE) {
+//     pte_t *pte = walkpgdir(p->pgdir, va, 0);
+//     if (!pte) continue;
+
+//     // Check for a page that is present and hasn't been accessed
+//     if ((*pte & PTE_P) && !(*pte & PTE_A)) {
+//       char *pa = P2V(PTE_ADDR(*pte));
+//       int slot = find_free_swap_slot();
+//       if (slot < 0) return -1;  // No free slots, return error
+
+//       int perm = *pte & 0xFFF;  // Save PTE flags (permissions)
+//       if (write_page_to_swap(pa, perm, slot) < 0) return -1; // Write page to swap
+
+//       kfree(pa);  // Free the physical memory page
+
+//       // Mark the page as swapped
+//       *pte = (slot << 12) | SWAPPED_FLAG | (perm & ~PTE_P);
+//       p->rss--;  // Decrease the resident set size
+
+//       lcr3(V2P(p->pgdir));  // Flush TLB to ensure the page is correctly swapped
+
+//       return 0;  // Successfully swapped out a page
+//     }
+//   }
+
+//   return -1;  // No pages available for swapping (this shouldn't happen)
+// }
+
+
+int swapout_one_page(void) {
+  cprintf("Inside swapout_one_page\n");
+  struct proc *p = select_victim_process();
+  if (!p) return -1;
+
+  for (char *va = 0; va < (char*)p->sz; va += PGSIZE) {
+    pte_t *pte = walkpgdir(p->pgdir, va, 0);
+    if (!pte) continue;
+    if ((*pte & PTE_P) && !(*pte & PTE_A)) {
+      char *pa = P2V(PTE_ADDR(*pte));
+      int slot = find_free_swap_slot();
+      if (slot < 0) return -1;
+
+      int perm = *pte & 0xFFF;  // save PTE flags
+      if (write_page_to_swap(pa, perm, slot) < 0) return -1;
+
+      kfree(pa);
+      *pte = (slot << 12) | SWAPPED_FLAG | (perm & ~PTE_P);  // mark as swapped
+      p->rss--;
+      lcr3(V2P(p->pgdir));  // flush TLB
+      return 0;
+    }
+  }
+  return -1;
 }

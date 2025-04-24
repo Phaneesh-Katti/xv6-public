@@ -233,6 +233,12 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   for(; a < newsz; a += PGSIZE){
     mem = kalloc();
     if(mem == 0){
+      // TRY SWAP OUT
+      if(swapout_one_page() == 0){
+        mem = kalloc();  // Try again
+      }
+    }
+    if(mem == 0){
       cprintf("allocuvm out of memory\n");
       deallocuvm(pgdir, newsz, oldsz);
       return 0;
@@ -245,6 +251,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
   }
+  myproc()->rss++;
   return newsz;
 }
 

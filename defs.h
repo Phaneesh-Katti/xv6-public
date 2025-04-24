@@ -195,3 +195,6 @@ pte_t*          walkpgdir(pde_t *pgdir, const void *va, int alloc);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+void swapinit(void);
+int swapout_one_page(void);

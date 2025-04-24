@@ -8,6 +8,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "spinlock.h"
+#include "pageswap.h"
 
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
@@ -93,4 +94,55 @@ kalloc(void)
     release(&kmem.lock);
   return (char*)r;
 }
+
+// Gets stuck at Booting from HD..
+// char*
+// kalloc(void)
+// {
+//   cprintf("Entering kalloc\n");
+//   struct run *r;
+
+//   acquire(&kmem.lock);
+//   r = kmem.freelist;
+//   if(r)
+//     kmem.freelist = r->next;
+//   release(&kmem.lock);
+
+//   if(r) {
+//     cprintf("kalloc: got memory at %p\n", r);
+//     memset((char*)r, 5, PGSIZE); // fill with junk
+    
+//     // Check memory threshold after allocation
+//     check_memory_threshold();
+//   }
+//   return (char*)r;
+// }
+
+// extern int initialized;  // Declare this at the top of kalloc.c
+// extern int checking_threshold;
+
+// char*
+// kalloc(void)
+// {
+//   struct run *r;
+
+//   acquire(&kmem.lock);
+//   r = kmem.freelist;
+//   if(r)
+//     kmem.freelist = r->next;
+//   release(&kmem.lock);
+
+//   if(r) {
+//     memset((char*)r, 5, PGSIZE); // fill with junk
+    
+//     // Only check threshold after system is fully initialized
+//     // and avoid recursion by checking a flag
+//     if(initialized && !checking_threshold) {
+//       checking_threshold = 1;
+//       check_memory_threshold();
+//       checking_threshold = 0;
+//     }
+//   }
+//   return (char*)r;
+// }
 

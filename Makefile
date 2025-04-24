@@ -78,6 +78,9 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+# ALPHA ?= 25
+# BETA ?= 10
+# CFLAGS += -DALPHA=$(ALPHA) -DBETA=$(BETA)
 CFLAGS += -Wno-infinite-recursion -Wno-array-bounds
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
@@ -184,6 +187,8 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_fibtest\
+	_memtest\
+	_pagetest\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

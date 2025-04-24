@@ -215,8 +215,8 @@ consoleintr(int (*getc)(void))
       break;
     case C('I'):
       release(&cons.lock);
-      cprintf("Ctrl-I is detected by xv6\n");
-      cprintf("PID    NUM_PAGES\n");
+      cprintf("Ctrl+I is detected by xv6\n");
+      cprintf("PID NUM_PAGES\n");
       memory_printer(); // before acquiring lock, coz it has a cprint
       acquire(&cons.lock);
       break;

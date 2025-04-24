@@ -580,7 +580,7 @@ void memory_printer(void) {
     if (p->pid >= 1 &&
         (p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING)) {
       int pages_in_ram = count_user_pages(p);
-      cprintf("%d    %d\n", p->pid, pages_in_ram);
+      cprintf("%d %d\n", p->pid, pages_in_ram);
     }
   }
   release(&ptable.lock);

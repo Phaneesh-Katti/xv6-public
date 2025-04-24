@@ -80,6 +80,7 @@ trap(struct trapframe *tf)
     break;
   // page fault case
   case T_PGFLT:
+    // cprintf("Page fault!!!!!!!!!\n");
     if(myproc() == 0 || (tf->cs&3) == 0){
       // Page fault in kernel mode - this is a kernel bug
       cprintf("kernel page fault: eip=%x, va=%x\n", tf->eip, rcr2());

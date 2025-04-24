@@ -8,8 +8,8 @@
 #include "traps.h"
 #include "memlayout.h"
 
-// #define TOTAL_MEMORY (2 << 20) + (1 << 18) + (1 << 17)
-#define TOTAL_MEMORY (10 << 20) + (1 << 18) + (1 << 17)
+#define TOTAL_MEMORY (2 << 20) + (1 << 18) + (1 << 17)
+// #define TOTAL_MEMORY (10 << 20) + (1 << 18) + (1 << 17)
 
 void
 mem(void)

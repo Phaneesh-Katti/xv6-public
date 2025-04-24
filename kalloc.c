@@ -80,69 +80,76 @@ kfree(char *v)
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
+// char*
+// kalloc(void)
+// {
+//   struct run *r;
+
+//   if(kmem.use_lock)
+//     acquire(&kmem.lock);
+//   r = kmem.freelist;
+//   if(r)
+//     kmem.freelist = r->next;
+//   if(kmem.use_lock)
+//     release(&kmem.lock);
+//   return (char*)r;
+// }
+
+// Adaptive threshold parameters
+static int Th = 100;        // Initial threshold (Th)
+static int Npg = 4;      // Initial number of pages to swap (Npg)
+#define LIMIT 100           // Maximum number of pages to swap at once
+
+int count_free_pages(void) {
+  int count = 0;
+  struct run *r;
+  
+  acquire(&kmem.lock);
+  r = kmem.freelist;
+  while (r) {
+    count++;
+    r = r->next;
+  }
+  release(&kmem.lock);
+  
+  return count;
+}
+
 char*
 kalloc(void)
 {
   struct run *r;
 
   if(kmem.use_lock)
-    acquire(&kmem.lock);
+  acquire(&kmem.lock);
   r = kmem.freelist;
   if(r)
     kmem.freelist = r->next;
   if(kmem.use_lock)
     release(&kmem.lock);
-  return (char*)r;
+
+  if(r)
+    return (char*)r;
+
+  // cprintf("count_free_pages=%d, Th=%d", count_free_pages(), Th);
+  if(count_free_pages() < Th){
+    cprintf("Current Threshold: %d, Swapping %d pages\n", Th, Npg);
+
+    for(int i = 0; i < Npg; i++){
+      if (swapout_one_page() < 0)
+        break;
+    }
+
+    Th = (Th * (100 - BETA))/ 100;
+    if(Th > 0 && Th < 1)
+      Th = 1;
+    
+    Npg = (Npg * (100 + ALPHA)) / 100;
+    if(Npg > LIMIT)
+      Npg = LIMIT;
+
+    return kalloc();
+  }
+
+  return 0;
 }
-
-// Gets stuck at Booting from HD..
-// char*
-// kalloc(void)
-// {
-//   cprintf("Entering kalloc\n");
-//   struct run *r;
-
-//   acquire(&kmem.lock);
-//   r = kmem.freelist;
-//   if(r)
-//     kmem.freelist = r->next;
-//   release(&kmem.lock);
-
-//   if(r) {
-//     cprintf("kalloc: got memory at %p\n", r);
-//     memset((char*)r, 5, PGSIZE); // fill with junk
-    
-//     // Check memory threshold after allocation
-//     check_memory_threshold();
-//   }
-//   return (char*)r;
-// }
-
-// extern int initialized;  // Declare this at the top of kalloc.c
-// extern int checking_threshold;
-
-// char*
-// kalloc(void)
-// {
-//   struct run *r;
-
-//   acquire(&kmem.lock);
-//   r = kmem.freelist;
-//   if(r)
-//     kmem.freelist = r->next;
-//   release(&kmem.lock);
-
-//   if(r) {
-//     memset((char*)r, 5, PGSIZE); // fill with junk
-    
-//     // Only check threshold after system is fully initialized
-//     // and avoid recursion by checking a flag
-//     if(initialized && !checking_threshold) {
-//       checking_threshold = 1;
-//       check_memory_threshold();
-//       checking_threshold = 0;
-//     }
-//   }
-//   return (char*)r;
-// }
-

@@ -7,6 +7,7 @@
 #include "param.h"
 #include "buf.h"
 #include "proc.h"      // struct proc 
+// #include "mmu.h"       // For V2P, PTE flags, etc.
 #include "memlayout.h"
 #include "x86.h"       // For rcr2(), lcr3(), CR3, etc.
 
@@ -169,7 +170,8 @@ int page_fault_handler(void) {
   if (!(*pte & SWAPPED_FLAG))
       return -1;
 
-  int slot = (*pte >> 12) & 0xFFFFF;  // Extract slot index (adjust mask as needed)
+  // int slot = (*pte >> 12) & 0xFFFFF;  // Extract slot index (adjust mask as needed)
+  int slot = (*pte >> 12);  // Extract slot index (adjust mask as needed)
   char *mem = kalloc();
 
   if (!mem) {
@@ -180,6 +182,8 @@ int page_fault_handler(void) {
       if (!mem)
           return -1;
   }
+
+  // if (mem==0) return -1;
 
   // Read page from swap slot into memory
   int perm = read_page_from_swap(mem, slot);
